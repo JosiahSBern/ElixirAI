@@ -17,10 +17,44 @@ class EmulatorController:
     device_serial : str or None
         The device identifier once connected (None until `connect_device` is called).
     """
-    def __init__(self, device_ip, adb_path="adb"):
-        self.adb_path = adb_path
-        self.device_ip = device_ip
+    def __init__(self, device_ip=None, adb_path=None):
+        self.device_ip = device_ip or DEFAULT_PORTS[0] 
+        self.adb_path = adb_path or self._find_adb_path()        
         self.device_serial = None
+
+    def _find_adb_path(self):
+        """
+        Try to find ADB path automatically on Windows.
+        """
+        import os
+        import shutil
+        
+        # First, try to find adb in PATH
+        adb_path = shutil.which("adb")
+        if adb_path:
+            return adb_path
+        
+        # Common ADB installation paths on Windows
+        possible_paths = [
+            r"C:\Users\{}\AppData\Local\Android\Sdk\platform-tools\adb.exe".format(os.getenv('USERNAME')),
+            r"C:\Android\platform-tools\adb.exe",
+            r"C:\Program Files (x86)\Android\android-sdk\platform-tools\adb.exe",
+            r"C:\tools\platform-tools\adb.exe",
+            # BlueStacks ADB paths
+            r"C:\Program Files\BlueStacks_nxt\HD-Adb.exe",  # BlueStacks 5 (newer version)
+            r"C:\Program Files\BlueStacks\HD-Adb.exe",      # BlueStacks 4
+            r"C:\Program Files (x86)\BlueStacks\HD-Adb.exe",
+        ]
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+        
+        # If nothing found, return default and let user know
+        print("WARNING: ADB not found. Please install Android SDK Platform Tools or specify adb_path manually.")
+        print("Download from: https://developer.android.com/studio/releases/platform-tools")
+        return "adb"
+
     
     def adb_run(self,timeout):
         cmd = [self.adb_path]
